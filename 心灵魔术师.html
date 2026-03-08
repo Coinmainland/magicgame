@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<!-- saved from url=(0091)file:///C:/Users/%E9%99%86%E5%B1%B1%E7%9A%84%E7%94%B5%E8%84%91/Downloads/magic-trick_2.html -->
+<html lang="zh"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心灵魔术师</title>
+<link href="./心灵魔术师_files/css2" rel="stylesheet">
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-light: #f0d080;
+  --deep: #06030f;
+  --purple-dark: #1a0a2e;
+  --text-light: #e8dfc8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; }
+body {
+  background: var(--deep);
+  color: var(--text-light);
+  font-family: 'Cormorant Garamond', serif;
+  position: relative;
+}
+
+/* ── Stars ─────────────────────────────────────── */
+#stars-canvas {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+}
+
+/* ── Floor glow ─────────────────────────────────── */
+.floor-glow {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:70%; height:180px;
+  background: radial-gradient(ellipse at bottom, rgba(80,30,160,0.25) 0%, transparent 70%);
+  pointer-events:none; z-index:1;
+}
+
+/* ── Overlay for scenes ─────────────────────────── */
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  z-index: 40;
+}
+
+/* ── Scene layer ──────────────────────────────────*/
+.scene {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.scene.active { display: block; }
+.scene button, .scene .btn-magic { pointer-events: auto; }
+
+/* ══════════════════════════════════════════════════
+   MAGICIAN — full-screen SVG character
+══════════════════════════════════════════════════ */
+.magician-svg {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 96vh;
+  width: auto;
+  filter: drop-shadow(0 0 40px rgba(130,60,220,0.4));
+}
+
+/* idle body sway */
+@keyframes bodySway {
+  0%,100% { transform: translateX(-50%) rotate(-0.6deg); }
+  50%      { transform: translateX(-50%) rotate(0.6deg); }
+}
+.magician-svg.idle { animation: bodySway 4s ease-in-out infinite; }
+
+/* arm wave */
+@keyframes armWave {
+  0%   { transform: rotate(0deg); }
+  20%  { transform: rotate(-55deg); }
+  45%  { transform: rotate(-30deg); }
+  65%  { transform: rotate(-60deg); }
+  85%  { transform: rotate(-20deg); }
+  100% { transform: rotate(0deg); }
+}
+.magician-svg .arm-right.waving {
+  transform-origin: 52px 8px;
+  animation: armWave 1.2s ease forwards;
+}
+
+/* sparkle from hand */
+@keyframes handSparkle {
+  0%   { opacity:0; transform: scale(0) translate(0,0); }
+  30%  { opacity:1; transform: scale(1.2) translate(8px,-12px); }
+  100% { opacity:0; transform: scale(0.5) translate(30px,-50px); }
+}
+.hand-sparkle { animation: handSparkle 1s ease forwards; }
+
+/* head subtle nod */
+@keyframes headNod {
+  0%,100% { transform: rotate(0deg); }
+  40%     { transform: rotate(4deg); }
+}
+.magician-svg .head-group { animation: headNod 5s ease-in-out infinite; }
+
+/* eye glow removed */
+
+/* cape sway */
+@keyframes capeSway {
+  0%,100% { transform: skewX(-1deg); }
+  50%     { transform: skewX(1.5deg); }
+}
+.magician-svg .cape { animation: capeSway 3s ease-in-out infinite; }
+
+/* ── Speech panel — top strip, above card zone ── */
+.speech-panel {
+  position: absolute;
+  z-index: 35;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 1.5vh;
+  width: min(500px, 88vw);
+  background: linear-gradient(145deg, rgba(18,7,38,0.82), rgba(8,3,18,0.90));
+  border: 1px solid rgba(201,168,76,0.35);
+  border-radius: 10px;
+  padding: 10px 20px;
+  box-shadow: 0 4px 32px rgba(80,20,160,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* entrance animation */
+  animation: panelDrop 0.55s cubic-bezier(0.22,1,0.36,1) both;
+  overflow: hidden;
+}
+/* drop-in from above with slight bounce */
+@keyframes panelDrop {
+  0%   { opacity:0; transform: translateX(-50%) translateY(-22px) scaleY(0.85); }
+  70%  { opacity:1; transform: translateX(-50%) translateY(3px)   scaleY(1.02); }
+  100% { opacity:1; transform: translateX(-50%) translateY(0)     scaleY(1); }
+}
+/* gold shimmer sweep across panel after it lands */
+.speech-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 20%,
+    rgba(201,168,76,0.18) 45%,
+    rgba(255,240,180,0.22) 50%,
+    rgba(201,168,76,0.12) 55%,
+    transparent 80%);
+  animation: shimmerSweep 0.9s 0.45s ease forwards;
+  transform: translateX(-100%);
+  pointer-events: none;
+  border-radius: 10px;
+}
+@keyframes shimmerSweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(120%); }
+}
+.speech-title {
+  font-family: 'Cinzel Decorative', cursive;
+  font-size: 0.6rem;
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  opacity: 0.8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* typing cursor blink */
+.speech-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-light);
+  font-style: italic;
+  min-height: 1.6em;
+  flex: 1;
+}
+.speech-text .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: rgba(201,168,76,0.8);
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 0.7s step-end infinite;
+}
+@keyframes cursorBlink {
+  0%,100% { opacity:1; }
+  50%      { opacity:0; }
+}
+
+/* ── Cards overlay — sits OVER magician body, UNDER his head/arms ── */
+#card-backdrop { display:none; } /* replaced by card-zone */
+
+#cards-overlay {
+  position: absolute;
+  z-index: 22;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 40vh;
+  width: min(440px, 80vw);
+}
+.cards-table {
+  background: radial-gradient(ellipse at center, rgba(45,18,84,0.55) 0%, rgba(10,6,18,0.85) 100%);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04);
+  /* 固定尺寸：5列x3行 card-slot(58x84) + gap(5) + padding(12/10) + timer(13) */
+  width: 334px;
+  height: 295px;
+  box-sizing: border-box;
+  overflow: visible;
+  position: relative;
+  flex-shrink: 0;
+}
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 58px);
+  grid-template-rows: repeat(3, 84px);
+  gap: 5px;
+  justify-items: center;
+}
+
+/* ── Timer bar ─────────────────────────────────── */
+#timer-bar-wrap {
+  width:100%; height:3px;
+  background: rgba(255,255,255,0.07);
+  border-radius:2px; margin-bottom:10px; overflow:hidden;
+  /* 始终占位，只改 visibility */
+  flex-shrink: 0;
+}
+#timer-bar {
+  height:100%;
+  background: linear-gradient(90deg, var(--gold), #f0a0a0);
+  border-radius:2px; width:100%;
+}
+
+/* ── Cards ─────────────────────────────────────── */
+.card-slot {
+  perspective: 600px;
+  width: 58px;
+  height: 84px;
+}
+.card-slot.shuffling {
+  position: absolute;
+  transition: left 0.45s cubic-bezier(0.4,0,0.2,1),
+              top  0.45s cubic-bezier(0.4,0,0.2,1),
+              transform 0.45s ease;
+  z-index: 20;
+  pointer-events: none;
+}
+.card-inner {
+  width:100%; height:100%;
+  position:relative;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.card-inner.flipped { transform: rotateY(180deg); }
+.card-face, .card-back-face {
+  position:absolute; width:100%; height:100%;
+  border-radius:5px; backface-visibility:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.card-face {
+  background:#fff; flex-direction:column;
+  border:1px solid #ccc;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+  justify-content: space-between;
+  padding: 2px 3px;
+}
+.card-face .corner-tl {
+  display:flex; flex-direction:column; align-items:center;
+  line-height:1; align-self:flex-start;
+}
+.card-face .corner-tl .c-rank {
+  font-size:11px; font-weight:900;
+  font-family:'Arial Black',sans-serif; line-height:1;
+}
+.card-face .corner-tl .c-suit { font-size:9px; line-height:1; margin-top:1px; }
+.card-face .suit-center { font-size:18px; line-height:1; align-self:center; }
+.card-face .corner-br {
+  display:flex; flex-direction:column; align-items:center;
+  transform:rotate(180deg); line-height:1; align-self:flex-end;
+}
+.card-face .corner-br .c-rank {
+  font-size:11px; font-weight:900;
+  font-family:'Arial Black',sans-serif; line-height:1;
+}
+.card-face .corner-br .c-suit { font-size:9px; line-height:1; margin-top:1px; }
+.card-face.red  { color: #d0001f; }
+.card-face.black{ color: #111; }
+.card-back-face {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1a237e 100%);
+  transform: rotateY(180deg);
+  border: 2px solid rgba(255,255,255,0.12);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+}
+.card-back-face .pattern {
+  position:absolute; inset:4px;
+  border:1px solid rgba(255,255,255,0.12); border-radius:3px;
+  background: repeating-linear-gradient(45deg, transparent, transparent 3px,
+    rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px);
+}
+
+/* ── Collect: 牌飞回魔术师手 ── */
+@keyframes cardCollect {
+  0%   { transform: translate(0,0) scale(1) rotate(0deg); opacity:1; }
+  100% { transform: var(--collect-tx) scale(0.15) rotate(var(--collect-rot)); opacity:0; }
+}
+.card-slot.collecting {
+  animation: cardCollect 0.5s cubic-bezier(0.4,0,1,1) forwards;
+  pointer-events:none;
+}
+
+/* ── Vanish: 整个 card-slot 飞出，牌面强制隐藏 ── */
+.card-slot.vanished {
+  animation: cardFlyOut 0.6s cubic-bezier(0.4,0,1,1) forwards;
+  pointer-events: none;
+}
+.card-slot.vanished .card-face {
+  visibility: hidden;   /* 飞出全程只露牌背 */
+}
+@keyframes cardFlyOut {
+  0%   { transform: translate(0,0)            rotate(0deg);  opacity:1; }
+  100% { transform: translate(120px,-280px)   rotate(35deg); opacity:0; }
+}
+.card-slot.vanished-empty { opacity:0; }
+
+/* ── Empty slot pulse ── */
+@keyframes emptyPulse {
+  0%,100% { border-color:rgba(201,168,76,0.25); }
+  50%     { border-color:rgba(201,168,76,0.6); box-shadow:0 0 10px rgba(201,168,76,0.2); }
+}
+
+/* ── Bottom bar (buttons / scene title) ─────────── */
+.bottom-bar {
+  position:absolute; bottom:2vh; left:50%;
+  transform:translateX(-50%);
+  z-index:35;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+}
+.scene-header {
+  font-family:'Cinzel Decorative',cursive; font-size:0.6rem;
+  color:rgba(201,168,76,0.45); letter-spacing:0.3em;
+}
+.btn-magic {
+  padding:12px 36px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04));
+  border:1px solid var(--gold);
+  color:var(--gold-light);
+  font-family:'Cinzel Decorative',cursive; font-size:0.75rem;
+  letter-spacing:0.1em; cursor:pointer; border-radius:4px;
+  transition:all 0.3s; position:relative; overflow:hidden;
+}
+.btn-magic:hover {
+  background: linear-gradient(135deg, rgba(201,168,76,0.22), rgba(201,168,76,0.08));
+  box-shadow:0 0 22px rgba(201,168,76,0.3);
+  transform:translateY(-2px);
+}
+
+/* ── Reveal message ─────────────────────────────── */
+.reveal-message {
+  font-family:'Cinzel Decorative',cursive; font-size:1.4rem;
+  color:var(--gold);
+  text-shadow:0 0 30px rgba(201,168,76,0.8);
+  text-align:center; margin-bottom:12px;
+  animation: glowPulse 2s ease infinite;
+}
+@keyframes glowPulse {
+  0%,100%{ text-shadow:0 0 25px rgba(201,168,76,0.5); }
+  50%    { text-shadow:0 0 55px rgba(201,168,76,1), 0 0 90px rgba(201,168,76,0.4); }
+}
+
+/* ── Sparkle particles ──────────────────────────── */
+.sparkle {
+  position:fixed; pointer-events:none; z-index:100;
+  animation: sparkleFly 1.2s ease-out forwards; font-size:16px;
+}
+@keyframes sparkleFly {
+  0%  { opacity:1; transform:translate(0,0) scale(1); }
+  100%{ opacity:0; transform:translate(var(--dx),var(--dy)) scale(0); }
+}
+
+/* ── Countdown overlay ──────────────────────────── */
+#countdown-overlay {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none; align-items:center; justify-content:center;
+  z-index:200;
+  font-family:'Cinzel Decorative',cursive; font-size:8rem;
+  color:var(--gold);
+  text-shadow:0 0 60px rgba(201,168,76,0.8);
+}
+#countdown-overlay.show { display:flex; }
+
+/* ══════════════════════════════════════════════════
+   手机适配 (≤480px 竖屏)
+══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* 魔术师缩小，让出更多空间 */
+  .magician-svg { height: 75vh; }
+
+  /* 对话框 */
+  .speech-panel {
+    top: 1vh;
+    padding: 7px 12px;
+    gap: 8px;
+    width: 94vw;
+  }
+  .speech-title { font-size: 0.5rem; }
+  .speech-text  { font-size: 0.78rem; }
+
+  /* 牌格：整体等比缩放适配小屏 */
+  #card-zone {
+    top: 35vh !important;
+    transform: translateX(-50%) scale(0.82) !important;
+    transform-origin: top center !important;
+  }
+
+  /* 按钮更大更易点击 */
+  .btn-magic {
+    padding: 14px 28px;
+    font-size: 0.7rem;
+    min-height: 44px;
+  }
+  .bottom-bar { bottom: 3vh; }
+}
+
+/* 极小屏 (≤360px) */
+@media (max-width: 360px) {
+  .magician-svg { height: 68vh; }
+  #card-zone {
+    top: 33vh !important;
+    transform: translateX(-50%) scale(0.72) !important;
+    transform-origin: top center !important;
+  }
+}
+
+/* 横屏手机 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .magician-svg { height: 110vh; }
+  #card-zone {
+    top: 18vh !important;
+    transform: translateX(-50%) scale(0.75) !important;
+    transform-origin: top center !important;
+  }
+  .speech-panel { top: 0.5vh; padding: 5px 12px; }
+  .bottom-bar { bottom: 1vh; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas" width="1488" height="712"></canvas>
+<div class="floor-glow"></div>
+<div id="countdown-overlay"></div>
+
+<div id="stage">
+<!-- persistent card-zone backdrop — always visible, hides magician body during transitions -->
+<div id="card-backdrop"></div>
+
+<!-- ════════════════════════════════════════════════
+     SCENE 1 — Intro
+════════════════════════════════════════════════ -->
+
+
+<!-- ════════════════════════════════════════════════
+     SCENE 1 — Intro
+════════════════════════════════════════════════ -->
+<div class="scene active" id="scene-intro">
+  <div class="speech-panel">
+    <div class="speech-title">神秘魔术师</div>
+    <p class="speech-text" data-src="欢迎，屏幕前的朋友… 我能感受到你的存在。&lt;em&gt; 我能读取你的心思。&lt;/em&gt;">欢迎，屏幕前的朋友… 我能感受到你的存在。<em> 我能读取你的心思。</em></p>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-magic" onclick="startMagic()">✦ 我准备好了 ✦</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SCENE 2 — Memorize cards
+════════════════════════════════════════════════ -->
+<div class="scene" id="scene-memorize">
+  <div class="speech-panel">
+    <div class="speech-title">记住一张</div>
+    <p class="speech-text">牌出现了… <strong style="color:var(--gold)">请快速记住其中一张！</strong> 把它刻在你心里。</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SCENE 3 — Shuffle
+════════════════════════════════════════════════ -->
+<div class="scene" id="scene-shuffle">
+  <div class="speech-panel">
+    <div class="speech-title">打乱</div>
+    <p class="speech-text">已经记住了吗？ 我来将牌打乱… <em>然后让你的那张牌消失。</em></p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SCENE 4 — Vanished
+════════════════════════════════════════════════ -->
+<div class="scene" id="scene-vanished">
+  <div class="speech-panel">
+    <div class="speech-title">完成</div>
+    <p class="speech-text">完成了！ 你的那张牌……已经消失。 <em>不相信？翻开来看看。</em></p>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-magic" onclick="revealCards()">✦ 翻开所有牌 ✦</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SCENE 5 — Reveal
+════════════════════════════════════════════════ -->
+<div class="scene" id="scene-reveal">
+  <div class="speech-panel">
+    <div class="speech-title">见证奇迹</div>
+    <p class="speech-text">你所记住的那张牌，已不在桌上。 <em style="color:var(--gold)">我一直知道你选了哪张。</em></p>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-magic" onclick="restartMagic()">↺ 再来一次</button>
+  </div>
+</div>
+
+</div><!-- #stage -->
+
+<!-- ═══ 固定牌格容器：所有场景共用，位置绝对固定 ═══ -->
+<div id="card-zone" style="position:fixed;z-index:22;left:50%;transform:translateX(-50%);top:40vh;width:334px;display:none;">
+  <div class="cards-table">
+    <div id="timer-bar-wrap" style="visibility:hidden;"><div id="timer-bar"></div></div>
+    <div class="cards-grid" id="cards-grid"></div>
+  </div>
+</div>
+
+<svg class="magician-svg idle" id="magician-main" viewBox="0 0 200 520" xmlns="http://www.w3.org/2000/svg" style="position:fixed;z-index:15;bottom:0;left:50%;transform:translateX(-50%);height:96vh;width:auto;pointer-events:none;">
+  <defs>
+    <radialgradient id="faceG" cx="48%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#fddcb4"></stop>
+      <stop offset="100%" stop-color="#e8a96a"></stop>
+    </radialgradient>
+    <lineargradient id="suitG" x1="0%" y1="0%" x2="10%" y2="100%">
+      <stop offset="0%" stop-color="#1a0e30"></stop>
+      <stop offset="100%" stop-color="#0b0618"></stop>
+    </lineargradient>
+    <lineargradient id="capeG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#13082a"></stop>
+      <stop offset="100%" stop-color="#070310"></stop>
+    </lineargradient>
+    <lineargradient id="capeLineG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7030c0" stop-opacity="0.6"></stop>
+      <stop offset="50%" stop-color="#c9a84c" stop-opacity="0.7"></stop>
+      <stop offset="100%" stop-color="#7030c0" stop-opacity="0.6"></stop>
+    </lineargradient>
+    <filter id="wandGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <fegaussianblur stdDeviation="5" result="b"></fegaussianblur>
+      <femerge><femergenode in="b"></femergenode><femergenode in="SourceGraphic"></femergenode></femerge>
+    </filter>
+    <radialgradient id="eyeIrisG" cx="38%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="#6b4c2a"></stop>
+      <stop offset="55%" stop-color="#3a2010"></stop>
+      <stop offset="100%" stop-color="#1a0c06"></stop>
+    </radialgradient>
+    <lineargradient id="hatShineG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.08)"></stop>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"></stop>
+    </lineargradient>
+  </defs>
+
+  <!-- ── CAPE — clasped at neck, hangs behind body ── -->
+  <!-- The cape is BEHIND the figure: narrower at top (neck/collar), wider at hem.
+       Left edge: x~72 at shoulder → x~40 at mid → x~30 at floor
+       Right edge: x~128 at shoulder → x~160 at mid → x~170 at floor
+       Starts at y=170 (below collar), ends at y=520 (floor) -->
+  <path d="M80,172
+           C 72,188 58,230 42,310
+           C 30,380 28,460 30,520
+           L170,520
+           C172,460 170,380 158,310
+           C142,230 128,188 120,172
+           Q100,164 80,172 Z" fill="url(#capeG)"></path>
+  <!-- cape back center crease -->
+  <path d="M100,172 C100,260 100,380 100,520" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="3"></path>
+  <!-- left inner lining — visible at edge -->
+  <path d="M30,520 C28,460 30,380 42,310 C52,250 64,210 74,182
+           L80,172 C68,190 54,234 40,316 C28,388 28,462 30,520 Z" fill="#3a1268" opacity="0.45"></path>
+  <!-- right inner lining -->
+  <path d="M170,520 C172,460 170,380 158,310 C148,250 136,210 126,182
+           L120,172 C132,190 146,234 160,316 C172,388 172,462 170,520 Z" fill="#3a1268" opacity="0.45"></path>
+  <!-- hem gold trim -->
+  <path d="M30,520 Q100,516 170,520" fill="none" stroke="#c9a84c" stroke-width="1.8" opacity="0.6"></path>
+  <!-- collar clasp at neck -->
+  <path d="M86,172 Q100,166 114,172" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round"></path>
+  <circle cx="100" cy="170" r="3" fill="#c9a84c" opacity="0.9"></circle>
+
+  <!-- ── LEGS ── -->
+  <!-- left leg -->
+  <path d="M84,390 L80,520 L96,520 L100,390 Z" fill="#120828" stroke="#0a0418" stroke-width="1.2"></path>
+  <!-- right leg -->
+  <path d="M116,390 L104,520 L120,520 L124,390 Z" fill="#160b30" stroke="#0a0418" stroke-width="1.2"></path>
+  <!-- shoes -->
+  <path d="M74,512 Q70,520 98,520 L96,510 Z" fill="#08030f" stroke="#0a0418" stroke-width="1"></path>
+  <path d="M126,512 Q130,520 102,520 L104,510 Z" fill="#08030f" stroke="#0a0418" stroke-width="1"></path>
+
+  <!-- ── SUIT BODY ── -->
+  <rect x="70" y="186" width="60" height="212" rx="12" fill="url(#suitG)" stroke="#0a0418" stroke-width="1.5"></rect>
+  <!-- shirt front -->
+  <path d="M100,192 L88,208 L93,300 L100,292 L107,300 L112,208 Z" fill="#f0ece4" stroke="#c8c0b0" stroke-width="0.8"></path>
+  <!-- bow tie -->
+  <path d="M94,215 L100,222 L106,215 L100,208 Z" fill="#c9a84c" stroke="#a07830" stroke-width="0.5"></path>
+  <circle cx="100" cy="215" r="2.5" fill="#f0d070"></circle>
+  <!-- buttons -->
+  <circle cx="100" cy="252" r="2" fill="#c9a84c" opacity="0.7"></circle>
+  <circle cx="100" cy="268" r="2" fill="#c9a84c" opacity="0.7"></circle>
+  <!-- pocket square -->
+  <path d="M108,204 L116,200 L117,208 L111,210 Z" fill="#c9a84c" opacity="0.85"></path>
+  <!-- lapels -->
+  <path d="M70,198 Q60,180 68,168 L100,186 Z" fill="url(#suitG)" stroke="#0a0418" stroke-width="1"></path>
+  <path d="M130,198 Q140,180 132,168 L100,186 Z" fill="url(#suitG)" stroke="#0a0418" stroke-width="1"></path>
+
+  <!-- ── LEFT ARM ── -->
+  <path d="M74,195 Q50,235 44,285 Q41,308 46,326" stroke="#120828" stroke-width="26" stroke-linecap="round" fill="none"></path>
+  <!-- left hand — white glove, relaxed hang -->
+  <!-- 手掌+四指 圆润轮廓 -->
+  <path d="M38,322 C37,318 39,314 42,313
+           Q45,311 48,312 Q51,311 53,313
+           Q56,311 57,314 Q58,318 57,322
+           C57,330 54,336 48,337 C42,337 38,333 38,326 Z" fill="#eeecea" stroke="#c8c4bc" stroke-width="1"></path>
+  <!-- 拇指 -->
+  <path d="M38,326 C34,323 34,318 37,316 C40,314 42,317 42,321" fill="#eeecea" stroke="#c8c4bc" stroke-width="1"></path>
+  <!-- 指间缝线 -->
+  <path d="M45,313 Q45,318 45,322" fill="none" stroke="#c8c4bc" stroke-width="0.6" stroke-linecap="round"></path>
+  <path d="M50,312 Q50,317 50,322" fill="none" stroke="#c8c4bc" stroke-width="0.6" stroke-linecap="round"></path>
+  <path d="M55,314 Q55,318 55,322" fill="none" stroke="#c8c4bc" stroke-width="0.6" stroke-linecap="round"></path>
+  <!-- 手腕袖口 -->
+  <path d="M38,328 Q48,332 57,328" fill="none" stroke="#c8c4bc" stroke-width="1.5" stroke-linecap="round"></path>
+
+  <!-- ── RIGHT ARM ── -->
+  <g id="arm-right" class="arm-right">
+    <path d="M126,195 Q150,230 156,278 Q159,300 154,318" stroke="#120828" stroke-width="26" stroke-linecap="round" fill="none"></path>
+    <!-- right hand — white glove, gripping wand -->
+    <!-- 握拳轮廓，拇指朝上握杆 -->
+    <path d="M145,318 C144,313 147,308 152,307
+             Q156,306 160,308 Q163,311 162,317
+             C162,324 159,330 154,331 C149,332 145,328 145,322 Z" fill="#eeecea" stroke="#c8c4bc" stroke-width="1"></path>
+    <!-- 拇指 -->
+    <path d="M145,322 C141,318 141,313 144,311 C147,309 149,313 149,318" fill="#eeecea" stroke="#c8c4bc" stroke-width="1"></path>
+    <!-- 指间缝线 -->
+    <path d="M150,308 Q150,313 150,318" fill="none" stroke="#c8c4bc" stroke-width="0.6" stroke-linecap="round"></path>
+    <path d="M155,307 Q155,312 155,318" fill="none" stroke="#c8c4bc" stroke-width="0.6" stroke-linecap="round"></path>
+    <path d="M159,309 Q159,314 159,319" fill="none" stroke="#c8c4bc" stroke-width="0.6" stroke-linecap="round"></path>
+    <!-- 手腕袖口 -->
+    <path d="M145,324 Q154,329 162,324" fill="none" stroke="#c8c4bc" stroke-width="1.5" stroke-linecap="round"></path>
+    <!-- wand — single straight line, tip at (170,245) -->
+    <!-- dark shaft -->
+    <line x1="153" y1="312" x2="170" y2="245" stroke="#12082a" stroke-width="4" stroke-linecap="round"></line>
+    <!-- white tip band — centered at tip, rotated to match shaft angle (≈14° from vertical) -->
+    <rect x="167" y="238" width="6" height="14" rx="2.5" fill="#eee8d8" transform="rotate(14,170,245)"></rect>
+    <!-- tip glow — centred exactly on tip -->
+    <circle cx="170" cy="245" r="6" fill="rgba(255,255,255,0.9)" filter="url(#wandGlow)"></circle>
+    <circle cx="170" cy="245" r="12" fill="rgba(200,170,255,0.18)" filter="url(#wandGlow)"></circle>
+  </g>
+
+  <!-- ── NECK ── -->
+  <rect x="94" y="157" width="12" height="32" rx="5" fill="#e8a96a"></rect>
+  <!-- collar points -->
+  <path d="M86,182 L94,162 L100,170 L106,162 L114,182 Z" fill="#f0ece4"></path>
+
+  <!-- ── HEAD ── -->
+  <!-- viewBox 200×520, face centred at x=100 -->
+  <!-- face occupies y=90..160, hat sits y=10..95 overlapping top of head -->
+  <g class="head-group" style="transform-origin:100px 125px">
+
+    <!-- ╔══════════════╗
+         ║   TOP  HAT   ║   drawn FIRST so face renders on top
+         ╚══════════════╝ -->
+    <!-- crown — tall trapezoid sitting on top of head, y=10..90 -->
+    <path d="M78,90 L80,14 L120,14 L122,90 Z" fill="#100828"></path>
+    <!-- crown top cap -->
+    <ellipse cx="100" cy="14" rx="20" ry="5" fill="#1a0c38"></ellipse>
+    <!-- hat shine strip -->
+    <rect x="82" y="14" width="6" height="76" rx="3" fill="rgba(255,255,255,0.04)"></rect>
+    <!-- hat band -->
+    <rect x="78" y="76" width="44" height="9" rx="0" fill="#c9a84c"></rect>
+    <rect x="78" y="76" width="44" height="2" rx="0" fill="#f0d070" opacity="0.5"></rect>
+    <!-- brim — sits at y=85..97, wider than crown -->
+    <path d="M54,91 C54,83 70,82 78,83 L122,83 C130,82 146,83 146,91
+             C146,99 130,100 122,99 L78,99 C70,100 54,99 54,91 Z" fill="#0c0520"></path>
+    <!-- brim edge highlight -->
+    <path d="M58,88 Q100,84 142,88" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"></path>
+
+    <!-- ╔══════════════╗
+         ║  HAIR (shows ║  just below hat brim, above ears
+         ╚══════════════╝ -->
+    <!-- hair band peeking out under brim -->
+    <path d="M62,96 Q70,90 78,90" stroke="#1c0e08" stroke-width="9" stroke-linecap="round" fill="none"></path>
+    <path d="M138,96 Q130,90 122,90" stroke="#1c0e08" stroke-width="9" stroke-linecap="round" fill="none"></path>
+    <!-- sideburns down the temples -->
+    <path d="M68,100 Q64,112 66,122" stroke="#1c0e08" stroke-width="6" stroke-linecap="round" fill="none"></path>
+    <path d="M132,100 Q136,112 134,122" stroke="#1c0e08" stroke-width="6" stroke-linecap="round" fill="none"></path>
+
+    <!-- ╔══════════════╗
+         ║     FACE     ║   y=92..160
+         ╚══════════════╝ -->
+    <path d="M70,112
+             C 70,92 80,86 100,86
+             C 120,86 130,92 130,112
+             C 130,130 126,144 118,152
+             C 112,158 106,161 100,161
+             C 94,161 88,158 82,152
+             C 74,144 70,130 70,112 Z" fill="url(#faceG)"></path>
+    <!-- subtle jaw shadow -->
+    <path d="M78,148 Q100,162 122,148" fill="none" stroke="rgba(160,90,30,0.12)" stroke-width="6" stroke-linecap="round"></path>
+
+    <!-- ears -->
+    <path d="M70,110 C64,110 60,115 60,122 C60,129 64,134 70,132" fill="url(#faceG)" stroke="#c8905a" stroke-width="0.8"></path>
+    <path d="M63,115 Q61,122 63,128" fill="none" stroke="#c0844a" stroke-width="1.2" stroke-linecap="round"></path>
+    <path d="M130,110 C136,110 140,115 140,122 C140,129 136,134 130,132" fill="url(#faceG)" stroke="#c8905a" stroke-width="0.8"></path>
+    <path d="M137,115 Q139,122 137,128" fill="none" stroke="#c0844a" stroke-width="1.2" stroke-linecap="round"></path>
+
+    <!-- ╔══════════════╗
+         ║   FEATURES   ║
+         ╚══════════════╝ -->
+    <!-- eyebrows -->
+    <path d="M74,106 Q84,99 96,102" fill="none" stroke="#1c0e08" stroke-width="3.8" stroke-linecap="round"></path>
+    <path d="M104,102 Q116,99 126,106" fill="none" stroke="#1c0e08" stroke-width="3.8" stroke-linecap="round"></path>
+
+    <!-- ── EYES — smaller, refined ── -->
+    <!-- left eye -->
+    <ellipse cx="87" cy="113" rx="5.5" ry="5" fill="#f5f1ec"></ellipse>
+    <circle cx="87" cy="113" r="4" fill="url(#eyeIrisG)"></circle>
+    <circle cx="84.61384478618162" cy="113.74583060782416" r="2" fill="#0c0604" id="pupil-l"></circle>
+    <circle cx="89" cy="111" r="1.4" fill="white" opacity="0.9"></circle>
+    <circle cx="87" cy="113" r="6" fill="none" id="eye-glow-l"></circle>
+    <path d="M81,112 Q87,107 93,112" fill="none" stroke="#1a0a06" stroke-width="1.6" stroke-linecap="round"></path>
+    <path d="M81,114 Q87,118 93,114" fill="none" stroke="rgba(150,90,30,0.2)" stroke-width="0.9" stroke-linecap="round"></path>
+    <ellipse cx="87" cy="113" rx="6.5" ry="0.2999999999999998" fill="url(#faceG)" id="blink-l"></ellipse>
+
+    <!-- right eye -->
+    <ellipse cx="113" cy="113" rx="5.5" ry="5" fill="#f5f1ec"></ellipse>
+    <circle cx="113" cy="113" r="4" fill="url(#eyeIrisG)"></circle>
+    <circle cx="110.5934148567625" cy="113.67701399420434" r="2" fill="#0c0604" id="pupil-r"></circle>
+    <circle cx="115" cy="111" r="1.4" fill="white" opacity="0.9"></circle>
+    <circle cx="113" cy="113" r="6" fill="none" id="eye-glow-r"></circle>
+    <path d="M107,112 Q113,107 119,112" fill="none" stroke="#1a0a06" stroke-width="1.6" stroke-linecap="round"></path>
+    <path d="M107,114 Q113,118 119,114" fill="none" stroke="rgba(150,90,30,0.2)" stroke-width="0.9" stroke-linecap="round"></path>
+    <ellipse cx="113" cy="113" rx="6.5" ry="0.2999999999999998" fill="url(#faceG)" id="blink-r"></ellipse>
+
+    <!-- ── MONOCLE — round frame, right eye only ── -->
+    <circle cx="113" cy="113" r="9.5" fill="rgba(180,210,255,0.05)"></circle>
+    <circle cx="113" cy="113" r="9.5" fill="none" stroke="#8a6820" stroke-width="2"></circle>
+    <circle cx="113" cy="113" r="8.7" fill="none" stroke="rgba(255,210,80,0.2)" stroke-width="0.8"></circle>
+    <!-- nose bridge to left eye area -->
+    <line x1="103.5" y1="113" x2="100" y2="119" stroke="#8a6820" stroke-width="1.4" stroke-linecap="round"></line>
+    <!-- chain drooping from bottom -->
+    <path d="M113,122.5 Q117,132 122,142 Q127,154 130,168" fill="none" stroke="#a07828" stroke-width="1.1" stroke-dasharray="2,2.5" stroke-linecap="round" opacity="0.8"></path>
+    <circle cx="130" cy="169" r="2" fill="#c9a84c" opacity="0.85"></circle>
+
+    <!-- nose -->
+    <path d="M98,120 Q96,130 93,136 Q97,140 100,140 Q103,140 107,136 Q104,130 102,120" fill="none" stroke="#b07838" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+
+    <!-- mouth -->
+    <path d="M88,150 Q100,159 112,150" fill="none" stroke="#8c5a30" stroke-width="2.2" stroke-linecap="round"></path>
+    <path d="M90,147 Q95,144 100,147 Q105,144 110,147" fill="none" stroke="#a06838" stroke-width="1.3" stroke-linecap="round"></path>
+
+    <!-- moustache -->
+    <path d="M91,143 Q96,149 100,145 Q104,149 109,143" fill="#1c0e08" opacity="0.85"></path>
+
+  </g>
+
+    <!-- wand sparkles -->
+  <g id="wand-sparkles" opacity="0">
+    <text x="164" y="236" font-size="11" fill="#fff9c4" class="hand-sparkle" style="opacity:0">✦</text>
+    <text x="177" y="224" font-size="8" fill="#ffd700" class="hand-sparkle" style="opacity:0;animation-delay:0.1s">✧</text>
+    <text x="160" y="222" font-size="13" fill="#ffffff" class="hand-sparkle" style="opacity:0;animation-delay:0.2s">✦</text>
+  </g>
+</svg>
+
+
+
+
+
+
+
+
+<script>
+// ── Stars ──────────────────────────────────────────────────────
+const canvas = document.getElementById('stars-canvas');
+const ctx = canvas.getContext('2d');
+let stars = [];
+function resizeCanvas() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+function initStars() {
+  stars=[];
+  for(let i=0;i<200;i++) stars.push({
+    x:Math.random()*canvas.width, y:Math.random()*canvas.height,
+    r:Math.random()*1.4+0.2, speed:Math.random()*0.008+0.002, phase:Math.random()*Math.PI*2
+  });
+}
+function drawStars() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const t=Date.now()*0.001;
+  stars.forEach(s=>{
+    const a=0.25+0.75*(0.5+0.5*Math.sin(t*s.speed*10+s.phase));
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,248,220,${a*0.75})`; ctx.fill();
+  });
+  requestAnimationFrame(drawStars);
+}
+resizeCanvas(); initStars(); drawStars();
+setTimeout(runTypewriter, 500); // type intro on load
+window.addEventListener('resize',()=>{ resizeCanvas(); initStars(); });
+
+// ── Typewriter effect ──────────────────────────────────────────
+function typewrite(el, html, speed) {
+  speed = speed || 38;
+  // Save full HTML, clear element, add cursor
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+
+  // Flatten into typed segments [{plain text} | {html node}]
+  const segs = [];
+  temp.childNodes.forEach(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // split into individual chars
+      for (const ch of node.textContent) segs.push({ ch, node: null });
+    } else {
+      // styled span/em/strong — type chars inside a wrapper
+      for (const ch of node.textContent) segs.push({ ch, node });
+    }
+  });
+
+  el.innerHTML = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+
+  // Map from original node → created wrapper
+  const wrappers = new WeakMap();
+
+  let i = 0;
+  function tick() {
+    if (i >= segs.length) { cursor.remove(); return; }
+    const { ch, node } = segs[i++];
+    if (!node) {
+      // plain text — append to last text node or create one
+      const last = el.lastChild && el.lastChild !== cursor ? el.lastChild : null;
+      if (last && last.nodeType === Node.TEXT_NODE) {
+        last.textContent += ch;
+      } else {
+        const tn = document.createTextNode(ch);
+        el.insertBefore(tn, cursor);
+      }
+    } else {
+      // styled node
+      if (!wrappers.has(node)) {
+        const w = document.createElement(node.tagName);
+        Array.from(node.attributes).forEach(a => w.setAttribute(a.name, a.value));
+        el.insertBefore(w, cursor);
+        wrappers.set(node, w);
+      }
+      wrappers.get(node).textContent += ch;
+    }
+    const pause = /[，。！？…、]/.test(ch) ? speed * 6
+                : ch === ' ' ? speed * 0.5
+                : speed * (0.75 + Math.random() * 0.5);
+    setTimeout(tick, pause);
+  }
+  setTimeout(tick, 60);
+}
+
+function runTypewriter() {
+  const panel = document.querySelector('.scene.active .speech-text');
+  if (!panel) return;
+  if (!panel.dataset.src) panel.dataset.src = panel.innerHTML;
+  typewrite(panel, panel.dataset.src, 36);
+}
+
+// ── Eyes: blink + mouse gaze ───────────────────────────────────
+(function initEyes() {
+  const blinkL  = document.getElementById('blink-l');
+  const blinkR  = document.getElementById('blink-r');
+  const pupilL  = document.getElementById('pupil-l');
+  const pupilR  = document.getElementById('pupil-r');
+  const glowL   = document.getElementById('eye-glow-l');
+  const glowR   = document.getElementById('eye-glow-r');
+  const svg     = document.getElementById('magician-main');
+  if (!blinkL || !pupilL || !svg) return;
+
+  // ── Blink — animate ry attribute on ellipse (cross-browser safe) ──
+  function animateRy(el, fromRy, toRy, durationMs, onDone) {
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / durationMs, 1);
+      const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      el.setAttribute('ry', fromRy + (toRy - fromRy) * ease);
+      if (t < 1) requestAnimationFrame(step);
+      else if (onDone) onDone();
+    }
+    requestAnimationFrame(step);
+  }
+
+  function blink() {
+    // close: ry 0.3 → 9 (full eye height)
+    animateRy(blinkL, 0.3, 5, 90, null);
+    animateRy(blinkR, 0.3, 5, 90, () => {
+      // open: ry 5 → 0.3
+      setTimeout(() => {
+        animateRy(blinkL, 5, 0.3, 110, null);
+        animateRy(blinkR, 5, 0.3, 110, null);
+      }, 20);
+    });
+    setTimeout(blink, 2600 + Math.random() * 4000);
+  }
+  setTimeout(blink, 1200 + Math.random() * 1800);
+
+  // ── Mouse gaze: pupils drift toward cursor ──
+  const L_REST = { x: 87, y: 113 };
+  const R_REST = { x: 113, y: 113 };
+  const MAX_DRIFT = 2.5;
+
+  window.addEventListener('mousemove', e => {
+    const svgRect = svg.getBoundingClientRect();
+    const scaleX = 200 / svgRect.width;
+    const scaleY = 520 / svgRect.height;
+    const mx = (e.clientX - svgRect.left) * scaleX;
+    const my = (e.clientY - svgRect.top)  * scaleY;
+
+    function driftPupil(rest, el) {
+      const dx = mx - rest.x;
+      const dy = my - rest.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const factor = Math.min(dist, 40) / 40 * MAX_DRIFT;
+      el.setAttribute('cx', rest.x + (dx/dist)*factor);
+      el.setAttribute('cy', rest.y + (dy/dist)*factor);
+    }
+    driftPupil(L_REST, pupilL);
+    driftPupil(R_REST, pupilR);
+
+    // glow brightens when cursor near face region
+    const faceY = svgRect.top + svgRect.height * (113/520);
+    const proximity = Math.max(0, 1 - Math.abs(e.clientY - faceY) / (svgRect.height * 0.25));
+    const gAlpha = proximity * 0.5;
+    // no glow effect
+  });
+})();
+
+// ── Card data ──────────────────────────────────────────────────
+const SUITS=['♠','♥','♦','♣'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED_SUITS=['♥','♦'];
+function makeCard(s,r){ return {suit:s,rank:r,isRed:RED_SUITS.includes(s)}; }
+function shuffleArray(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function generateCards(count=15){
+  const pool=[];
+  SUITS.forEach(s=>RANKS.forEach(r=>pool.push(makeCard(s,r))));
+  return shuffleArray(pool).slice(0,count);
+}
+
+let currentCards=[];
+let shuffledCards=[]; // currentCards in the order shown during shuffle scene
+let vanishedCardIdx=0; // index in shuffledCards of the card that "vanished"
+let vanishedCard=null; // the actual card object that vanished
+
+// ── Render card ────────────────────────────────────────────────
+function renderCard(card, faceUp=true){
+  const slot=document.createElement('div');
+  slot.className='card-slot';
+  const inner=document.createElement('div');
+  inner.className='card-inner'+(faceUp?'':' flipped');
+  const front=document.createElement('div');
+  front.className='card-face '+(card.isRed?'red':'black');
+  front.innerHTML=`
+    <div class="corner-tl"><span class="c-rank">${card.rank}</span><span class="c-suit">${card.suit}</span></div>
+    <div class="suit-center">${card.suit}</div>
+    <div class="corner-br"><span class="c-rank">${card.rank}</span><span class="c-suit">${card.suit}</span></div>`;
+  const back=document.createElement('div');
+  back.className='card-back-face';
+  back.innerHTML='<div class="pattern"></div>';
+  inner.appendChild(front); inner.appendChild(back); slot.appendChild(inner);
+  return slot;
+}
+
+// ── Scene switch ───────────────────────────────────────────────
+function showScene(id){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // 固定牌格：intro 时隐藏，其他场景显示
+  const zone = document.getElementById('card-zone');
+  if(zone) zone.style.display = (id==='scene-intro') ? 'none' : 'block';
+  // backdrop: visible on all scenes except intro
+  const bd = document.getElementById('card-backdrop');
+  if (bd) bd.classList.toggle('visible', id !== 'scene-intro');
+  setTimeout(runTypewriter, 120);
+}
+
+// ── Sparkles ───────────────────────────────────────────────────
+function spawnSparkles(x,y,count=12){
+  const emojis=['✨','⭐','💫','🌟','✦','·'];
+  for(let i=0;i<count;i++){
+    const el=document.createElement('div'); el.className='sparkle';
+    el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    const angle=(Math.PI*2/count)*i+Math.random()*0.5;
+    const dist=80+Math.random()*120;
+    el.style.left=x+'px'; el.style.top=y+'px';
+    el.style.setProperty('--dx',Math.cos(angle)*dist+'px');
+    el.style.setProperty('--dy',Math.sin(angle)*dist+'px');
+    el.style.animationDelay=Math.random()*0.3+'s';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1800);
+  }
+}
+
+// ── Wave arm ───────────────────────────────────────────────────
+function waveArm(){
+  const arm=document.getElementById('arm-right');
+  const sparkles=document.getElementById('wand-sparkles');
+  if(!arm) return;
+  arm.classList.remove('waving');
+  void arm.offsetWidth;
+  arm.classList.add('waving');
+  // show wand sparkles
+  sparkles.style.opacity='1';
+  setTimeout(()=>{
+    arm.classList.remove('waving');
+    sparkles.style.opacity='0';
+  },1300);
+}
+
+// ── STEP 1: Show cards ─────────────────────────────────────────
+function startMagic(){
+  const zone=document.getElementById('card-zone'); if(zone) zone.style.display='block';
+  currentCards=generateCards(15);
+  const grid=document.getElementById('cards-grid');
+  grid.innerHTML='';
+  // 先背面朝上
+  currentCards.forEach(card=>grid.appendChild(renderCard(card,false)));
+  showScene('scene-memorize');
+  sfx.cardWhoosh();
+
+  // 短暂停顿后逐张翻开牌面，让观众记忆
+  setTimeout(()=>{
+    sfx.sparkle();
+    grid.querySelectorAll('.card-inner').forEach((inner,i)=>{
+      setTimeout(()=>{ inner.classList.remove('flipped'); if(i%4===0) sfx.cardFlip(); }, i*35);
+    });
+  }, 500);
+
+  // 进度条：牌翻开后开始倒计时
+  const timerWrap=document.getElementById('timer-bar-wrap'); if(timerWrap) timerWrap.style.visibility='visible';
+  const bar=document.getElementById('timer-bar');
+  bar.style.transition='none'; bar.style.width='100%';
+  setTimeout(()=>{ bar.style.transition='width 3s linear'; bar.style.width='0%'; }, 600);
+
+  // 3s后翻回背面，再进入洗牌
+  setTimeout(()=>{
+    flipAllCards(grid);
+    setTimeout(()=>goToShuffle(),1200);
+  },3600);
+}
+
+function flipAllCards(grid){
+  grid.querySelectorAll('.card-inner').forEach((inner,i)=>{
+    setTimeout(()=>{ inner.classList.add('flipped'); if(i%3===0) sfx.cardFlip(); },i*40);
+  });
+}
+
+// ── STEP 2: Shuffle animation then show shuffle scene ──────────
+function goToShuffle(){
+  // 立即切换文字场景，牌还在原位
+  showScene('scene-shuffle');
+  const timerW=document.getElementById('timer-bar-wrap'); if(timerW) timerW.style.visibility='hidden';
+  waveArm();
+
+  // 记录洗牌顺序（动画在现有 DOM 上操作，不重新渲染）
+  shuffledCards=shuffleArray([...currentCards]);
+
+  const grid=document.getElementById('cards-grid');
+  animateShuffle(grid,()=>{
+    // 动画结束后不重新渲染，直接触发消失
+    setTimeout(()=>vanishCard(),600);
+  });
+  setTimeout(()=>sfx.heartbeat(),400);
+}
+
+function animateShuffle(grid,onDone){
+  const slots=Array.from(grid.querySelectorAll('.card-slot'));
+  const container=grid.getBoundingClientRect();
+  const origPositions=slots.map(s=>{
+    const r=s.getBoundingClientRect();
+    return {left:r.left-container.left,top:r.top-container.top};
+  });
+  // 容器尺寸固定，只需设置 relative 让子元素 absolute 生效
+  grid.style.position='relative';
+  slots.forEach((s,i)=>{
+    s.classList.add('shuffling');
+    s.style.left=origPositions[i].left+'px'; s.style.top=origPositions[i].top+'px';
+    s.style.width='58px'; s.style.height='84px';
+  });
+  const W=grid.offsetWidth, H=grid.offsetHeight;
+  setTimeout(()=>{
+    sfx.cardWhoosh();
+    slots.forEach(s=>{
+      const tx=Math.random()*(W-65)+5, ty=Math.random()*(H-90)+5;
+      s.style.transition='left 0.4s ease,top 0.4s ease,transform 0.4s ease';
+      s.style.left=tx+'px'; s.style.top=ty+'px';
+      s.style.transform=`rotateY(180deg) rotate(${(Math.random()-0.5)*40}deg)`;
+    });
+  },50);
+  setTimeout(()=>{
+    sfx.cardWhoosh();
+    slots.forEach(s=>{
+      const tx=Math.random()*(W-65)+5, ty=Math.random()*(H-90)+5;
+      s.style.left=tx+'px'; s.style.top=ty+'px';
+      s.style.transform=`rotateY(180deg) rotate(${(Math.random()-0.5)*50}deg)`;
+    });
+  },520);
+  const shuffledPos=shuffleArray([...origPositions]);
+  setTimeout(()=>{
+    sfx.cardWhoosh();
+    slots.forEach((s,i)=>{
+      s.style.transition='left 0.45s cubic-bezier(0.4,0,0.2,1),top 0.45s cubic-bezier(0.4,0,0.2,1),transform 0.45s ease';
+      s.style.left=shuffledPos[i].left+'px'; s.style.top=shuffledPos[i].top+'px';
+      s.style.transform='rotateY(180deg) rotate(0deg)';
+    });
+  },1000);
+  setTimeout(()=>{
+    slots.forEach(s=>{
+      s.classList.remove('shuffling');
+      s.style.position=s.style.left=s.style.top=s.style.transform=s.style.transition='';
+    });
+    grid.style.position='';  // 不重置 height（已固定）
+    onDone();
+  },1600);
+}
+
+// ── STEP 3: Vanish one card ────────────────────────────────────
+function vanishCard(){
+  waveArm();
+  sfx.wandWave();
+  spawnSparkles(window.innerWidth/2,window.innerHeight*0.45,20);
+  const slots=document.querySelectorAll('#cards-grid .card-slot');
+  const idx=Math.floor(Math.random()*slots.length);
+  const vanishSlot=slots[idx];
+  // Record the actual card object that disappears (not just index)
+  vanishedCardIdx=idx;
+  vanishedCard=currentCards[idx]; // DOM order matches currentCards
+  setTimeout(()=>{
+    // 牌飞出屏幕
+    vanishSlot.classList.add('vanished');
+    sfx.vanishPoof();
+    setTimeout(()=>{
+      vanishSlot.classList.add('vanished-empty');
+      setTimeout(()=>goToVanished(idx), 300);
+    }, 600);
+  }, 600);
+}
+
+// ── STEP 4: Show gap ───────────────────────────────────────────
+function goToVanished(missingIdx){
+  // 不重新渲染——直接清空那张牌的slot，其余牌位置不动
+  const slots = document.querySelectorAll('#cards-grid .card-slot');
+  const target = slots[missingIdx];
+  if(target){ target.innerHTML=''; target.dataset.empty='1'; }
+  waveArm();
+  showScene('scene-vanished');
+}
+
+// ── STEP 5: Reveal ─────────────────────────────────────────────
+function revealCards(){
+  // 魔术原理：新牌从第一轮没出现过的牌里选——观众记住哪张都必然消失
+  const usedKeys = new Set(currentCards.map(cd => cd.rank + cd.suit));
+  // 全52张排除第一轮15张，剩37张随机取14——花色点数都变，迷惑性强
+  const pool = [];
+  SUITS.forEach(s => RANKS.forEach(r => {
+    if (!usedKeys.has(r + s)) pool.push(makeCard(s, r));
+  }));
+  const newCards = shuffleArray(pool).slice(0, 14);
+
+  // 不清空grid——直接替换每个有牌的slot内容，空slot（消失的那张）保持空着
+  const grid = document.getElementById('cards-grid');
+  const slots = Array.from(grid.querySelectorAll('.card-slot'));
+  let cardIdx = 0;
+  slots.forEach(slot => {
+    if(slot.dataset.empty) return; // 空slot（消失位置）跳过
+    // 替换为新牌，背面朝上
+    const newCard = newCards[cardIdx++];
+    if(!newCard) return;
+    slot.innerHTML = '';
+    const inner = document.createElement('div');
+    inner.className = 'card-inner flipped';
+    const front = document.createElement('div');
+    front.className = 'card-face ' + (newCard.isRed ? 'red' : 'black');
+    front.innerHTML = `<div class="corner-tl"><div class="c-rank">${newCard.rank}</div><div class="c-suit">${newCard.suit}</div></div><div class="suit-center">${newCard.suit}</div><div class="corner-br"><div class="c-rank">${newCard.rank}</div><div class="c-suit">${newCard.suit}</div></div>`;
+    const back = document.createElement('div');
+    back.className = 'card-back-face';
+    back.innerHTML = '<div class="pattern"></div>';
+    inner.appendChild(front);
+    inner.appendChild(back);
+    slot.appendChild(inner);
+  });
+
+  showScene('scene-reveal');
+  sfx.reveal();
+  waveArm();
+
+  // 逐张翻开
+  const filledSlots = slots.filter(s => s.innerHTML !== '' && s.querySelector('.card-inner'));
+  filledSlots.forEach((slot,i)=>{
+    const inner = slot.querySelector('.card-inner');
+    if(inner) setTimeout(()=>{
+      inner.classList.remove('flipped'); sfx.cardFlip();
+    }, 200+i*80);
+  });
+
+  // 翻开后约5秒，把牌收回魔术师手里
+  const flipDone = 200 + (filledSlots.length-1)*80;
+  setTimeout(()=>{
+    // 魔术师右手在屏幕中央偏右下（waveArm位置）
+    const svgEl = document.getElementById('magician-main');
+    const svgRect = svgEl ? svgEl.getBoundingClientRect() : {left:window.innerWidth/2, top:0, width:0, height:window.innerHeight};
+    // 右手 viewBox 约 (153,312) / (200,520) → 屏幕坐标
+    const handX = svgRect.left + (153/200)*svgRect.width;
+    const handY = svgRect.top  + (312/520)*svgRect.height;
+
+    const freshSlots = Array.from(grid.querySelectorAll('.card-slot')).filter(s=>s.innerHTML!=='');
+    freshSlots.forEach((slot,i)=>{
+      setTimeout(()=>{
+        const r = slot.getBoundingClientRect();
+        const dx = handX - (r.left + r.width/2);
+        const dy = handY - (r.top  + r.height/2);
+        const rot = (Math.random()-0.5)*40;
+        slot.style.setProperty('--collect-tx', `translate(${dx}px,${dy}px)`);
+        slot.style.setProperty('--collect-rot', `${rot}deg`);
+        slot.classList.add('collecting');
+        sfx.cardFlip();
+      }, i*60);
+    });
+    // 收牌完毕后回到开场
+    setTimeout(()=> restartMagic(), freshSlots.length*60 + 600);
+  }, flipDone + 5000);
+}
+
+// ── Restart ────────────────────────────────────────────────────
+function restartMagic(){ showScene('scene-intro'); }
+
+// ══════════════════════════════════════════════════════════════
+// 🔊 SFX ENGINE
+// ══════════════════════════════════════════════════════════════
+const sfx=(()=>{
+  let actx=null;
+  function ctx(){
+    if(!actx) actx=new(window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    return actx;
+  }
+  function makeReverb(dur,decay){
+    const c=ctx(),buf=c.createBuffer(2,c.sampleRate*dur,c.sampleRate);
+    for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,decay);}
+    const conv=c.createConvolver();conv.buffer=buf;return conv;
+  }
+  function sparkle(){
+    const c=ctx(),rev=makeReverb(2,3);rev.connect(c.destination);
+    [523,659,784,1047,1319,1568,2093].forEach((freq,i)=>setTimeout(()=>{
+      const osc=c.createOscillator(),g=c.createGain();
+      osc.type='sine';osc.frequency.value=freq*(1+(Math.random()-0.5)*0.02);
+      g.gain.setValueAtTime(0,c.currentTime);g.gain.linearRampToValueAtTime(0.16,c.currentTime+0.01);
+      g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.55);
+      osc.connect(g);g.connect(rev);osc.start();osc.stop(c.currentTime+0.6);
+    },i*55+Math.random()*25));
+  }
+  function cardWhoosh(){
+    const c=ctx(),buf=c.createBuffer(1,c.sampleRate*0.35,c.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=c.createBufferSource();src.buffer=buf;
+    const flt=c.createBiquadFilter();flt.type='bandpass';flt.Q.value=1.2;
+    flt.frequency.setValueAtTime(900,c.currentTime);flt.frequency.exponentialRampToValueAtTime(180,c.currentTime+0.35);
+    const g=c.createGain();g.gain.setValueAtTime(0.25,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.35);
+    src.connect(flt);flt.connect(g);g.connect(c.destination);src.start();src.stop(c.currentTime+0.4);
+  }
+  function cardFlip(){
+    const c=ctx(),buf=c.createBuffer(1,c.sampleRate*0.07,c.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+    const src=c.createBufferSource();src.buffer=buf;
+    const flt=c.createBiquadFilter();flt.type='highpass';flt.frequency.value=1400;
+    const g=c.createGain();g.gain.value=0.1;
+    src.connect(flt);flt.connect(g);g.connect(c.destination);src.start();
+  }
+  function wandWave(){
+    const c=ctx(),rev=makeReverb(3,1.5);rev.connect(c.destination);
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(180,c.currentTime);osc.frequency.exponentialRampToValueAtTime(1800,c.currentTime+0.85);
+    g.gain.setValueAtTime(0.0001,c.currentTime);g.gain.linearRampToValueAtTime(0.22,c.currentTime+0.1);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.95);
+    osc.connect(g);g.connect(rev);osc.start();osc.stop(c.currentTime+1);
+    setTimeout(()=>sparkle(),220);
+  }
+  function vanishPoof(){
+    const c=ctx(),rev=makeReverb(1.8,2);rev.connect(c.destination);
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.type='sawtooth';osc.frequency.setValueAtTime(550,c.currentTime);osc.frequency.exponentialRampToValueAtTime(35,c.currentTime+0.5);
+    g.gain.setValueAtTime(0.15,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.55);
+    osc.connect(g);g.connect(rev);osc.start();osc.stop(c.currentTime+0.6);
+    const nb=c.createBuffer(1,c.sampleRate*0.15,c.sampleRate),nd=nb.getChannelData(0);
+    for(let i=0;i<nd.length;i++)nd[i]=(Math.random()*2-1)*(1-i/nd.length);
+    const ns=c.createBufferSource();ns.buffer=nb;
+    const nf=c.createBiquadFilter();nf.type='bandpass';nf.frequency.value=280;nf.Q.value=0.9;
+    const ng=c.createGain();ng.gain.value=0.28;
+    ns.connect(nf);nf.connect(ng);ng.connect(c.destination);ns.start();
+  }
+  function reveal(){
+    // 纸牌翻动声：白噪声+高通滤波，模拟纸张翻动
+    function cardPaper(delayMs){
+      setTimeout(()=>{
+        const c=ctx();
+        const buf=c.createBuffer(1,c.sampleRate*0.06,c.sampleRate);
+        const d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5);
+        const src=c.createBufferSource(); src.buffer=buf;
+        const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1800;
+        const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=6000;
+        const g=c.createGain(); g.gain.value=0.13;
+        src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(c.destination);
+        src.start();
+      }, delayMs);
+    }
+    // 随15张牌的翻牌节奏发出纸张声
+    for(let i=0;i<15;i++) cardPaper(200+i*80);
+  }
+  function heartbeat(){
+    const c=ctx();
+    function beat(){
+      const osc=c.createOscillator(),g=c.createGain();
+      osc.type='sine';osc.frequency.setValueAtTime(75,c.currentTime);osc.frequency.exponentialRampToValueAtTime(38,c.currentTime+0.1);
+      g.gain.setValueAtTime(0.28,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.13);
+      osc.connect(g);g.connect(c.destination);osc.start();osc.stop(c.currentTime+0.15);
+    }
+    beat();setTimeout(beat,160);
+  }
+  return{sparkle,cardWhoosh,cardFlip,wandWave,vanishPoof,reveal,heartbeat};
+})();
+
+// ══════════════════════════════════════════════════════════════
+// 🎼 BACKGROUND MUSIC
+// ══════════════════════════════════════════════════════════════
+const music=(()=>{
+  let actx=null,started=false,masterGain=null;
+  function ctx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();return actx;}
+  function makeReverb(dur,decay){
+    const c=ctx(),buf=c.createBuffer(2,c.sampleRate*dur,c.sampleRate);
+    for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,decay);}
+    const conv=c.createConvolver();conv.buffer=buf;return conv;
+  }
+  const NOTE={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880};
+  const CHORDS=[[NOTE.A3,NOTE.C4,NOTE.E4],[NOTE.F3,NOTE.A3,NOTE.C4],[NOTE.C3,NOTE.E3,NOTE.G3],[NOTE.G3,NOTE.B3,NOTE.D4]];
+  const MELODY=[NOTE.A4,NOTE.G4,NOTE.E4,NOTE.F4,NOTE.A4,NOTE.C5,NOTE.B4,NOTE.A4,NOTE.G4,NOTE.E4,NOTE.D4,NOTE.E4,NOTE.F4,NOTE.A4,NOTE.G4,NOTE.E4];
+  function playNote(freq,startTime,dur,vol,type,rev,dest){
+    const c=ctx(),osc=c.createOscillator(),env=c.createGain();
+    osc.type=type;osc.frequency.value=freq;osc.detune.value=(Math.random()-0.5)*4;
+    env.gain.setValueAtTime(0,startTime);env.gain.linearRampToValueAtTime(vol,startTime+0.06);
+    env.gain.setValueAtTime(vol*0.7,startTime+dur*0.3);env.gain.exponentialRampToValueAtTime(0.0001,startTime+dur);
+    osc.connect(env);if(rev)env.connect(rev);env.connect(dest);osc.start(startTime);osc.stop(startTime+dur+0.05);
+  }
+  function start(){
+    if(started)return;started=true;
+    const c=ctx();if(c.state==='suspended')c.resume();
+    masterGain=c.createGain();masterGain.gain.setValueAtTime(0,c.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.55,c.currentTime+5);masterGain.connect(c.destination);
+    const rev=makeReverb(4.5,1.8);rev.connect(masterGain);
+    const revDry=makeReverb(1.2,3);revDry.connect(masterGain);
+    // cosmic ambience
+    const ambiGain=c.createGain();ambiGain.gain.value=0.07;ambiGain.connect(masterGain);
+    const noiseLen=c.sampleRate*8,noiseBuf=c.createBuffer(2,noiseLen,c.sampleRate);
+    for(let ch=0;ch<2;ch++){const d=noiseBuf.getChannelData(ch);let last=0;for(let i=0;i<noiseLen;i++){last=last*0.997+(Math.random()*2-1)*0.003;d[i]=last*18;}}
+    const noiseNode=c.createBufferSource();noiseNode.buffer=noiseBuf;noiseNode.loop=true;
+    const noiseFilter=c.createBiquadFilter();noiseFilter.type='bandpass';noiseFilter.frequency.value=320;noiseFilter.Q.value=0.4;
+    const noiseLfo=c.createOscillator(),noiseLfoG=c.createGain();noiseLfo.frequency.value=0.04;noiseLfoG.gain.value=90;
+    noiseLfo.connect(noiseLfoG);noiseLfoG.connect(noiseFilter.frequency);noiseLfo.start();
+    noiseNode.connect(noiseFilter);noiseFilter.connect(ambiGain);noiseNode.start();
+    [36.7,36.9].forEach((f,i)=>{
+      const osc=c.createOscillator(),g=c.createGain();osc.type='sine';osc.frequency.value=f;g.gain.value=0.28;
+      const lfo=c.createOscillator(),lfoG=c.createGain();lfo.frequency.value=0.03+i*0.011;lfoG.gain.value=0.1;
+      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start();osc.connect(g);g.connect(ambiGain);osc.start();
+    });
+    [1320,1760,2200,2640].forEach((f,i)=>{
+      const osc=c.createOscillator(),g=c.createGain();osc.type='sine';osc.frequency.value=f;g.gain.value=0;
+      const lfo=c.createOscillator(),lfoG=c.createGain();lfo.frequency.value=0.05+i*0.03;lfoG.gain.value=0.003;
+      lfo.connect(lfoG);lfoG.connect(g.gain);lfo.start(c.currentTime+i*1.5);osc.connect(g);g.connect(ambiGain);osc.start(c.currentTime+i*1.5);
+    });
+    const BPM=60,BEAT=60/BPM,BAR=BEAT*4,LOOP=BAR*4;
+    function scheduleLoop(startT){
+      CHORDS.forEach((chord,ci)=>{
+        const barStart=startT+ci*BAR;
+        chord.forEach((freq,ni)=>{
+          playNote(freq,barStart+ni*0.12,BAR*0.85,0.045,'triangle',rev,masterGain);
+          playNote(freq/2,barStart+ni*0.08,BAR*0.9,0.035,'sine',rev,masterGain);
+        });
+      });
+      MELODY.forEach((freq,mi)=>{
+        const noteStart=startT+mi*(BAR/4);
+        playNote(freq,noteStart,BEAT*0.42,0.028,'sine',revDry,masterGain);
+        playNote(freq*2,noteStart+0.03,BEAT*0.35,0.008,'sine',rev,masterGain);
+      });
+      for(let b=0;b<16;b++){
+        const bt=startT+b*BEAT,osc=c.createOscillator(),g=c.createGain();
+        osc.type='triangle';osc.frequency.setValueAtTime(b%4===0?180:120,bt);osc.frequency.exponentialRampToValueAtTime(60,bt+0.15);
+        g.gain.setValueAtTime(b%4===0?0.022:0.01,bt);g.gain.exponentialRampToValueAtTime(0.0001,bt+0.18);
+        osc.connect(g);g.connect(masterGain);osc.start(bt);osc.stop(bt+0.2);
+      }
+      setTimeout(()=>scheduleLoop(startT+LOOP),(LOOP-1)*1000);
+    }
+    scheduleLoop(c.currentTime+0.5);
+  }
+  return{start};
+})();
+
+function tryStartMusic(){
+  music.start();
+  document.removeEventListener('click',tryStartMusic);
+  document.removeEventListener('keydown',tryStartMusic);
+  document.removeEventListener('touchstart',tryStartMusic);
+}
+document.addEventListener('click',tryStartMusic);
+document.addEventListener('keydown',tryStartMusic);
+document.addEventListener('touchstart',tryStartMusic);
+setTimeout(()=>{try{music.start();}catch(e){}},300);
+</script>
+
+
+</body></html>
